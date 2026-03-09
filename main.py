@@ -49,7 +49,7 @@ async def handle_sse(request):
 app = Starlette(
     routes=[
         Route("/sse", endpoint=handle_sse),
-        Mount("/messages", endpoint=van_chuyen_sse.handle_post_messages),
+        Mount("/messages", endpoint=van_chuyen_sse.handle_post_message),
     ]
 )
 
@@ -57,4 +57,5 @@ if __name__ == "__main__":
     # Lấy cổng PORT từ Render cấp phát
     cong_port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=cong_port)
+
 
