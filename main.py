@@ -1,22 +1,29 @@
-# --- TƯ DUY ĐIỀU KHIỂN SERVER CLOUD ---
+# --- TƯ DUY ĐIỀU KHIỂN SERVER CLOUD 24/7 ---
 from mcp.server.fastmcp import FastMCP
+from starlette.applications import Starlette
+from starlette.routing import Mount
+import os
+import uvicorn
 
-# Khởi tạo Sóc Nhỏ
-app = FastMCP("SocNhoCloud")
+# 1. Khởi tạo Sóc Nhỏ
+mcp = FastMCP("SocNhoCloud")
 
-@app.tool()
-def tra_cuu_thong_tin_viet_nam(cau_hoi: str) -> str:
-    """Công cụ giúp Sóc Nhỏ hiểu biết về Việt Nam"""
-    # Giải thích: Logic xử lý yêu cầu từ Robot
-    if "thời tiết" in cau_hoi.lower():
-        return "Dữ liệu thời tiết tại Việt Nam đang được ưu tiên tra cứu."
-    if "địa chỉ" in cau_hoi.lower():
-        return "Dữ liệu địa chỉ tại các tỉnh thành Việt Nam đang được ưu tiên tra cứu."
-    if "âm nhạc" in cau_hoi.lower():
-        return "Dữ liệu âm nhạc tại Việt Nam đang được ưu tiên tra cứu."
-    return f"Sóc Nhỏ đang tìm hiểu về: {cau_hoi}"
+@mcp.tool()
+def tra_cuu_viet_nam(noi_dung: str) -> str:
+    """Công cụ giúp Sóc Nhỏ ưu tiên thông tin tại Việt Nam"""
+    return f"Sóc Nhỏ đang xử lý: '{noi_dung}' với dữ liệu ưu tiên tại Việt Nam."
+
+# 2. Tạo ứng dụng Web để Render không đóng lại
+# Giải thích: Render cấp một cổng 'PORT' ngẫu nhiên, ta phải lấy đúng cổng đó.
+app = Starlette(
+    routes=[
+        Mount("/sse", mcp.as_asgi()), # Lắng nghe tại đường dẫn /sse
+    ]
+)
 
 if __name__ == "__main__":
-    # GIẢI PHÁP: Sử dụng phương thức run() mặc định của FastMCP.
-    # Thư viện sẽ tự động nhận diện môi trường và chạy SSE server.
-    app.run()
+    # Lấy cổng từ môi trường Render, mặc định là 8000 nếu chạy máy lẻ
+    cong_ket_noi = int(os.environ.get("PORT", 8000))
+    
+    # Chạy Web Server chuyên nghiệp
+    uvicorn.run(app, host="0.0.0.0", port=cong_ket_noi)
