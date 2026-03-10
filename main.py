@@ -5,6 +5,7 @@ from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from starlette.applications import Starlette
 from starlette.routing import Route
+from starlette.requests import Request
 
 # 1. Khởi tạo Server MCP cơ bản
 may_chu_soc_nho = Server("SocNhoCloud")
@@ -40,22 +41,28 @@ async def thuc_thi_cong_cu(name, arguments):
 van_chuyen_sse = SseServerTransport("/sse")
 
 async def handle_sse(request):
+    # Lý thuyết: Duy trì luồng đọc/ghi dữ liệu liên tục cho SSE
     async with van_chuyen_sse.connect_sse(request.scope, request.receive, request._send) as (read_stream, write_stream):
         await may_chu_soc_nho.run(read_stream, write_stream, may_chu_soc_nho.create_initialization_options())
 
-# 4. Tạo ứng dụng Starlette (SỬA LỖI TẠI ĐÂY)
-# Giải thích: Đổi Mount thành Route để tương thích với endpoint của SSE
+async def handle_messages(request: Request):
+    # GIẢI PHÁP: Bọc hàm handle_post_message để truyền đủ scope, receive, send
+    # Đây là nơi sửa lỗi "TypeError: missing 2 required positional arguments"
+    return await van_chuyen_sse.handle_post_message(
+        request.scope,
+        request.receive,
+        request.send
+    )
+
+# 4. Tạo ứng dụng Starlette
 app = Starlette(
     routes=[
         Route("/sse", endpoint=handle_sse),
-        Route("/messages", endpoint=van_chuyen_sse.handle_post_message, methods=["POST"]),
+        # Thay đổi từ truyền hàm trực tiếp sang dùng hàm bọc (Wrapper)
+        Route("/messages", endpoint=handle_messages, methods=["POST"]),
     ]
 )
 
 if __name__ == "__main__":
-    # Lấy cổng PORT từ Render (mặc định 10000 hoặc 8000)
     cong_port = int(os.environ.get("PORT", 8000))
-    # Chạy uvicorn - người gác cổng cho Sóc Nhỏ
     uvicorn.run(app, host="0.0.0.0", port=cong_port)
-
-
